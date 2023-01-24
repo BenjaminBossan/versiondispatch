@@ -8,19 +8,18 @@ Decorate the main (default) function with ~versiondispatch~. Then, if you need s
 #+begin_src python
 @versiondispatch
 def foo():
-  return "default behavior"
+    return "default behavior"
 
 @foo.register("sklearn>1.2")
 def _():
-  return "new behavior"
+    return "new behavior"
 
 @foo.register("sklearn<1.0")
 def _():
-  return "old behavior"
+    return "old behavior"
 
-def test_foo():
-  with assumeversion("sklearn==1.1"):
-    assert foo() == "default behavior"
+
+foo()  # output depends on installed scikit-learn version
 #+end_src
 
 At function definition time, the decorator will check the actual version of (in this case) ~sklearn~ and make the correspondingly decorated function the one that will actually be used.
@@ -30,15 +29,15 @@ It is possible to dispatch on the versions of multiple packages:
 #+begin_src python
 @versiondispatch
 def foo():
-  return "default behavior"
+    return "default behavior"
 
 @foo.register("sklearn<1.0")
 def _():
-  return "only sklearn is old"
+    return "only sklearn is old"
 
 @foo.register("numpy<1.0, sklearn<1.0")
 def _():
-  return "both numpy and sklearn are old"
+    return "both numpy and sklearn are old"
 #+end_src
 
 If multiple conditions are matching, then the /last/ condition takes precendence. So in this case if both sklearn and numpy are below v1.0, we would get "both numpy and sklearn are old", and not "only sklearn is old", even though that matches too.
