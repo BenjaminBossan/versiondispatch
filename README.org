@@ -1,6 +1,6 @@
-* ~versiondispatch~
-** Goal: make it easier to adopt your code to use different versions of a package
-The API is similar to ~functools.singledispatch~
+* versiondispatch
+** Goal
+Make it easier to adopt your code to use different versions of a package. The API is similar to ~functools.singledispatch~
 ** Examples
 *** Dispatching on a single package version
 Decorate the main (default) function with ~versiondispatch~. Then, if you need specific behavior based on the version of a specific package, write that function and decorate it with ~.register(<version>)~ like shown below:
