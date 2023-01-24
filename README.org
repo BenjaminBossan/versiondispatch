@@ -54,7 +54,9 @@ There is no PyPI package for now. The best way to use this is to copy the conten
 *** run the unit tests:
 ~pytest --cov --cov-report=term-missing test.py~
 * TODOs
-Features not implemented yet:
+Under consideration to be implemented yet:
+** Docstrings and docs
+Need to be extended and improved.
 ** Optional warnings
 It would be nice to have a feature to add a warning when a specific version is found, most notably for deprecations:
 
@@ -71,6 +73,15 @@ def _():
 #+end_src
 ** No external dependencies
 Right now, there is a single external dependency, ~packaging~, which is used for version checks. Ideally, we can get rid of it.
+** Special keys
+*** Python
+Allow checks for the Python version, e.g. ~@foo.register("Python<3.10")~
+*** Operating system
+Allow checking for the OS, e.g. ~@foo.register("os==darwin")~
+*** Environment variables
+It might be nice to be able to check env vars, even if only for exact equality, like ~@foo.register("$LANG==en_US.UTF-8")~
+** Persistence
+Check that the decorated function can be pickled. Also, if feasible, make it possible that if the function is unpickled, the dispatch is re-evaluated, since the version could have changed by then.
 ** More checks on indicated versions
 It would be nice if version checks that don't make sense are caught at function definition time, like:
 
@@ -83,6 +94,8 @@ def foo():
 def _():
   return "can never be reached"
 #+end_src
+** Coverage
+If feasible (probably it's not), tell ~coverage~ which functions should be ignored for line coverage because they are meant for a different package version.
 ** General niceties
 - distribute on PyPI
 - set up CI
