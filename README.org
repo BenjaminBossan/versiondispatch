@@ -1,7 +1,7 @@
 * versiondispatch
 ** Goal
 Make it easier to adopt your code to use different versions of a package. The API is similar to ~functools.singledispatch~
-** Examples
+** Features
 *** Dispatching on a single package version
 Decorate the main (default) function with ~versiondispatch~. Then, if you need specific behavior based on the version of a specific package, write that function and decorate it with ~.register(<version>)~ like shown below:
 
@@ -10,6 +10,7 @@ Decorate the main (default) function with ~versiondispatch~. Then, if you need s
 def foo():
     return "default behavior"
 
+# the name of the registered function doesn't matter
 @foo.register("sklearn>1.2")
 def _():
     return "new behavior"
@@ -23,7 +24,7 @@ foo()  # output depends on installed scikit-learn version
 
 At function definition time, the decorator will check the actual version of (in this case) ~sklearn~ and make the correspondingly decorated function the one that will actually be used.
 *** Dispatching on multiple package versions
-It is possible to dispatch on the versions of multiple packages:
+It is possible to dispatch on the versions of multiple packages by enumerating them, separated by a comma:
 
 #+begin_src python
 @versiondispatch
