@@ -250,3 +250,38 @@ def test_invalid_package():
         @func.register("rich kid==1.0")
         def _(bar, baz="baz"):
             return "bar"
+
+
+def test_version_check_performed_only_once():
+    # Test that the version check is only performed once when registering, not
+    # once for each function call. This test relies on implementation details of
+    # the class
+    num_calls = 0
+
+    class myversiondispatch(versiondispatch):
+        def _matches_all_versions(self, package_versions):
+            nonlocal num_calls
+            num_calls += 1
+            return super()._matches_all_versions(package_versions)
+
+    @myversiondispatch
+    def func():
+        return 0
+
+    @func.register("rich<1.0")
+    def _():
+        return 1
+
+    for _ in range(10):
+        func()
+
+    assert num_calls == 1
+
+    @func.register("rich>=1000")
+    def _():
+        return 2
+
+    for _ in range(10):
+        func()
+
+    assert num_calls == 2

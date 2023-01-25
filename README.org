@@ -77,6 +77,8 @@ In contrast, if you write application code with all dependency versions being pi
 Under consideration to be implemented yet:
 ** Docstrings and docs
 Need to be extended and improved.
+** Class methods
+Test, and enable, version-dispatching methods on classes.
 ** Optional warnings
 It would be nice to have a feature to add a warning when a specific version is found, most notably for deprecations:
 
