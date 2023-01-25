@@ -42,6 +42,23 @@ def _():
 If multiple conditions are matching, then the /last/ condition takes precendence. So in this case if both sklearn and numpy are below v1.0, we would get "both numpy and sklearn are old", and not "only sklearn is old", even though that matches too.
 
 Depending on how you define the functions, the last condition is not necessarily the /most specific/ condition, so take care.
+*** Dispatching on the Python version
+It is possible to register different functions based on the Python version being used.
+
+#+begin_src python
+@versiondispatch
+def foo():
+    return "default behavior"
+
+@foo.register("sklearn<1.0")
+def _():
+    return "only sklearn is old"
+
+@foo.register("numpy<1.0, sklearn<1.0")
+def _():
+    return "both numpy and sklearn are old"
+#+end_src
+
 ** Installation
 There is no PyPI package for now. The best way to use this is to copy the contents of ~src.py~ into your own project and use it from there ("vendoring").
 ** Rationale
@@ -91,8 +108,6 @@ def _():
   return "old behavior"
 #+end_src
 ** Special keys
-*** Python
-Allow checks for the Python version, e.g. ~@foo.register("Python<3.10")~
 *** Operating system
 Allow checking for the OS, e.g. ~@foo.register("os==darwin")~
 *** Environment variables

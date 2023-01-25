@@ -2,6 +2,7 @@ import collections
 import itertools
 import operator
 import re
+import sys
 from contextlib import contextmanager
 from functools import update_wrapper
 from importlib.metadata import PackageNotFoundError
@@ -43,6 +44,9 @@ def _is_valid_version(version: str) -> bool:
 
 
 def _is_valid_package(package: str) -> bool:
+    if package.lower() == "python":
+        return True
+
     valid = True
     try:
         _get_version(package)
@@ -52,6 +56,9 @@ def _is_valid_package(package: str) -> bool:
 
 
 def get_version(package: str) -> "Version":
+    if package.lower() == "python":
+        return Version(".".join(map(str, sys.version_info[:3])))
+
     return Version(_get_version(package))
 
 
@@ -63,7 +70,12 @@ def pretend_version(version_dict: Dict[str, str]):
     get_version_orig = get_version
 
     def get_version(package: str):
-        return Version(version_dict.get(package, _get_version(package)))
+        version = version_dict.get(package)
+        # we can't do version_dict.get(package, _get_version(package)) since the
+        # 2nd argument may raise an error, e.g. for 'Python'
+        if version is None:
+            version = _get_version(package)
+        return Version(version)
 
     yield
 

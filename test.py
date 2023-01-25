@@ -530,3 +530,45 @@ def test_decorated_method_pickleable():
 
     loaded = pickle.loads(pickle.dumps(instance))
     assert loaded.func() == "default"
+
+
+class TestCheckPythonVersion:
+    # dispatching on Python version should be possible
+
+    def get_func(self):
+        @versiondispatch
+        def func():
+            return f"default"
+
+        @func.register("Python<3.8")
+        def _old():
+            return f"old"
+
+        @func.register("Python>=4")
+        def _new():
+            return f"new"
+
+        @func.register("Python==3.11.12")
+        def _exact():
+            return f"exact"
+
+        return func
+
+    def test_no_match(self):
+        func = self.get_func()
+        assert func() == "default"
+
+    def test_lt(self):
+        with pretend_version({"Python": "2.7"}):
+            func = self.get_func()
+            assert func() == "old"
+
+    def test_gt(self):
+        with pretend_version({"Python": "4"}):
+            func = self.get_func()
+            assert func() == "new"
+
+    def test_exact(self):
+        with pretend_version({"Python": "3.11.12"}):
+            func = self.get_func()
+            assert func() == "exact"
