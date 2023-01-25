@@ -102,8 +102,6 @@ Allow checks for the Python version, e.g. ~@foo.register("Python<3.10")~
 Allow checking for the OS, e.g. ~@foo.register("os==darwin")~
 *** Environment variables
 It might be nice to be able to check env vars, even if only for exact equality, like ~@foo.register("$LANG==en_US.UTF-8")~
-** Persistence
-Check that the decorated function can be pickled. Also, if feasible, make it possible that if the function is unpickled, the dispatch is re-evaluated, since the version could have changed by then.
 ** More checks on indicated versions
 It would be nice if version checks that don't make sense are caught at function definition time, like:
 

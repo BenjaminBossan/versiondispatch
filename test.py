@@ -1,3 +1,5 @@
+import pickle
+
 import pytest
 from importlib.metadata import version as _get_version
 
@@ -285,3 +287,36 @@ def test_version_check_performed_only_once():
         func()
 
     assert num_calls == 2
+
+
+class TestPickle:
+    # Tests centered around pickling the decorated function. Note that this test
+    # requires to use defined functions, such as min and max; locally defined
+    # functions are not pickleable to begin with.
+    def test_pickleable_default(self):
+        func = versiondispatch(min)
+
+        func.register("rich<1.0")(max)
+
+        loaded = pickle.loads(pickle.dumps(func))
+        assert loaded([1, 2, 3]) == 1
+
+    def test_pickleable_non_default(self):
+        with pretend_version({"rich": "0.1"}):
+            func = versiondispatch(min)
+
+            func.register("rich<1.0")(max)
+
+            loaded = pickle.loads(pickle.dumps(func))
+            assert loaded([1, 2, 3]) == 3
+
+    def test_version_changes_after_pickling(self):
+        # when pickling the function on version X and unpickling it on version
+        # Y, version Y should take precedence
+        func = versiondispatch(min)
+        func.register("rich<1.0")(max)
+        pickled = pickle.dumps(func)
+
+        with pretend_version({"rich": "0.1"}):
+            loaded = pickle.loads(pickle.dumps(func))
+            assert loaded([1, 2, 3]) == 3

@@ -3,7 +3,7 @@ import re
 from contextlib import contextmanager
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
-from typing import Callable, Dict
+from typing import Any, Callable, Dict
 
 from packaging.version import InvalidVersion, Version, parse
 
@@ -90,15 +90,19 @@ class versiondispatch:
 
         self._funcname = getattr(self._func, '__name__', 'versiondispatch function')
         self._impl = self._func  # use initial func by default
-        self._matched_version = ""
+        self._matched_version = ""  # mostly for debugging
+        self._registered_funcs = []
+
+    def _matches_all_versions(self, package_versions: list[tuple[str, str, BinOp]]) -> bool:
+        return _matches_all_versions(package_versions)
 
     def register(self, package_versions: str):
         splits = [pv.strip() for pv in package_versions.replace(";", ",").split(",")]
         return self._register(splits)
 
-    def _register(self, package_versions: list[str]):
+    def _register(self, package_version_list: list[str]):
         packages_versions = []
-        for package_version in package_versions:
+        for package_version in package_version_list:
             package, version, operator = _split_package_version(package_version)
 
             if not (_is_valid_package(package) and _is_valid_version(version)):
@@ -119,7 +123,9 @@ class versiondispatch:
                 # TODO some builtin functions are immutable
                 pass
 
-            if _matches_all_versions(packages_versions):
+            self._registered_funcs.append((",".join(package_version_list), func))
+
+            if self._matches_all_versions(packages_versions):
                 self._impl = func
                 self._matched_version = version
 
@@ -130,3 +136,22 @@ class versiondispatch:
 
     def __call__(self, *args, **kwargs):
         return self._impl(*args, **kwargs)
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return self.__dict__.copy()
+
+    def reset(self) -> None:
+        """TODO"""
+        # clear registration
+        self._impl = self._func
+        self._matched_version = ""
+        registered_functions = self._registered_funcs[:]
+        self._registered_funcs.clear()
+
+        # replay registration process
+        for package_versions, func in registered_functions:
+            self.register(package_versions)(func)
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        self.__dict__.update(state)
+        self.reset()
