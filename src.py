@@ -87,7 +87,6 @@ class versiondispatch:
     """TODO"""
     def __init__(self, func):
         self._func = func
-        self._func._is_versiondispatched = True
 
         self._funcname = getattr(self._func, '__name__', 'versiondispatch function')
         self._impl = self._func  # use initial func by default
@@ -114,7 +113,11 @@ class versiondispatch:
                     "multiple version, e.g. '@versiondispatch(\"foo=1.0\", \"bar=2.0\")'"
                 )
 
-            self._impl._is_versiondispatched = True
+            try:
+                self._impl._is_versiondispatched = True
+            except AttributeError:
+                # TODO some builtin functions are immutable
+                pass
 
             if _matches_all_versions(packages_versions):
                 self._impl = func
