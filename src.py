@@ -1,6 +1,7 @@
 import operator
 import re
 from contextlib import contextmanager
+from functools import update_wrapper
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
 from typing import Any, Callable, Dict
@@ -155,3 +156,19 @@ class versiondispatch:
     def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
         self.reset()
+
+    def __get__(self, obj, cls):
+        # This method is basically copied from functools.singledispatchmethod.
+        # Not exactly sure why it works but it seems to do its job.
+        def _method(*args, **kwargs):
+            method = self._impl
+            return method.__get__(obj, cls)(*args, **kwargs)
+
+        _method.__isabstractmethod__ = self.__isabstractmethod__
+        _method.register = self.register
+        update_wrapper(_method, self._func)
+        return _method
+
+    @property
+    def __isabstractmethod__(self):
+        return getattr(self._impl, '__isabstractmethod__', False)

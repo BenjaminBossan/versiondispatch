@@ -320,3 +320,213 @@ class TestPickle:
         with pretend_version({"rich": "0.1"}):
             loaded = pickle.loads(pickle.dumps(func))
             assert loaded([1, 2, 3]) == 3
+
+
+class TestMethodNoArgs:
+    # versiondispatch should work on methods too, not only functions
+    # Here: method without args
+    def get_instance(self):
+        class MyClass:
+            @versiondispatch
+            def func(self):
+                return f"default"
+
+            @func.register("rich<1.0")
+            def _old(self):
+                return f"old"
+
+            @func.register("rich>=1000")
+            def _new(self):
+                return f"new"
+
+            @func.register("rich==1.2.3")
+            def _exact(self):
+                return f"exact"
+
+        return MyClass()
+
+    def test_no_match(self):
+        instance = self.get_instance()
+        assert instance.func() == "default"
+
+    def test_lt(self):
+        with pretend_version({"rich": "0.1"}):
+            instance = self.get_instance()
+            assert instance.func() == "old"
+
+    def test_gt(self):
+        with pretend_version({"rich": "1001.0.0"}):
+            instance = self.get_instance()
+            assert instance.func() == "new"
+
+    def test_exact(self):
+        with pretend_version({"rich": "1.2.3"}):
+            instance = self.get_instance()
+            assert instance.func() == "exact"
+
+
+class TestMethodWithArgs:
+    # versiondispatch should work on methods too, not only functions
+    # Here: method with args and kwargs
+    def get_instance(self):
+        class MyClass:
+            @versiondispatch
+            def func(self, bar, baz="baz"):
+                return f"default {bar}-{baz}"
+
+            @func.register("rich<1.0")
+            def _old(self, bar, baz="baz"):
+                return f"old {bar}-{baz}"
+
+            @func.register("rich>=1000")
+            def _new(self, bar, baz="baz"):
+                return f"new {bar}-{baz}"
+
+            @func.register("rich==1.2.3")
+            def _exact(self, bar, baz="baz"):
+                return f"exact {bar}-{baz}"
+
+        return MyClass()
+
+    def test_no_match(self):
+        instance = self.get_instance()
+        assert instance.func("hi", baz="there") == "default hi-there"
+
+    def test_lt(self):
+        with pretend_version({"rich": "0.1"}):
+            instance = self.get_instance()
+            assert instance.func("hi", baz="there") == "old hi-there"
+
+    def test_gt(self):
+        with pretend_version({"rich": "1001.0.0"}):
+            instance = self.get_instance()
+            assert instance.func("hi", baz="there") == "new hi-there"
+
+    def test_exact(self):
+        with pretend_version({"rich": "1.2.3"}):
+            instance = self.get_instance()
+            assert instance.func("hi", baz="there") == "exact hi-there"
+
+
+class TestStaticMethod:
+    # versiondispatch should work on methods too, not only functions
+    # Here: staticmethod
+    def get_instance(self):
+        class MyClass:
+            @versiondispatch
+            @staticmethod
+            def func():
+                return f"default"
+
+            @func.register("rich<1.0")
+            @staticmethod
+            def _old():
+                return f"old"
+
+            @func.register("rich>=1000")
+            @staticmethod
+            def _new():
+                return f"new"
+
+            @func.register("rich==1.2.3")
+            @staticmethod
+            def _exact():
+                return f"exact"
+
+        return MyClass()
+
+    def test_no_match(self):
+        instance = self.get_instance()
+        assert instance.func() == "default"
+
+    def test_lt(self):
+        with pretend_version({"rich": "0.1"}):
+            instance = self.get_instance()
+            assert instance.func() == "old"
+
+    def test_gt(self):
+        with pretend_version({"rich": "1001.0.0"}):
+            instance = self.get_instance()
+            assert instance.func() == "new"
+
+    def test_exact(self):
+        with pretend_version({"rich": "1.2.3"}):
+            instance = self.get_instance()
+            assert instance.func() == "exact"
+
+
+class TestClassmethod:
+    # versiondispatch should work on methods too, not only functions
+    # Here: classmethod
+    def get_instance(self):
+        class MyClass:
+            @versiondispatch
+            @classmethod
+            def func(cls):
+                return f"default"
+
+            @func.register("rich<1.0")
+            @classmethod
+            def _old(cls):
+                return f"old"
+
+            @func.register("rich>=1000")
+            @classmethod
+            def _new(cls):
+                return f"new"
+
+            @func.register("rich==1.2.3")
+            @classmethod
+            def _exact(cls):
+                return f"exact"
+
+        return MyClass()
+
+    def test_no_match(self):
+        instance = self.get_instance()
+        assert instance.func() == "default"
+
+    def test_lt(self):
+        with pretend_version({"rich": "0.1"}):
+            instance = self.get_instance()
+            assert instance.func() == "old"
+
+    def test_gt(self):
+        with pretend_version({"rich": "1001.0.0"}):
+            instance = self.get_instance()
+            assert instance.func() == "new"
+
+    def test_exact(self):
+        with pretend_version({"rich": "1.2.3"}):
+            instance = self.get_instance()
+            assert instance.func() == "exact"
+
+
+class MyClass:
+    @versiondispatch
+    def func(self):
+        return f"default"
+
+    @func.register("rich<1.0")
+    def _old(self):
+        return f"old"
+
+    @func.register("rich>=1000")
+    def _new(self):
+        return f"new"
+
+    @func.register("rich==1.2.3")
+    def _exact(self):
+        return f"exact"
+
+
+def test_decorated_method_pickleable():
+    # Test that class instances with decorated methods are pickleable.
+    # Unfortunately, it's not easily possible to check this with different rich
+    # versions, because the class must be defined on the root level, or else it
+    # cannot be pickled.
+    instance = MyClass()
+    assert instance.func() == "default"
+
+    loaded = pickle.loads(pickle.dumps(instance))
+    assert loaded.func() == "default"
