@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from functools import update_wrapper
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
-from typing import Any, Callable, Dict, Optional, SupportsInt, Tuple, Union
+from typing import Any, Callable, Dict, Generator, Optional, SupportsInt, Tuple, Union
 
 
 __all__ = ["versiondispatch"]
@@ -30,6 +30,7 @@ _OP_TABLE = {
 }
 _OP_PAT = re.compile(r"|".join(_OP_TABLE))
 BinOp = Callable[["Version", "Version"], bool]
+AnyFunc = Callable[..., Any]
 
 
 def _split_package_version(package_version: str) -> tuple[str, str, BinOp]:
@@ -71,7 +72,7 @@ def get_version(package: str) -> "Version":
 
 
 @contextmanager
-def pretend_version(version_dict: Dict[str, str]):
+def pretend_version(version_dict: Dict[str, str]) -> Generator[None, None, None]:
     """Context manager to pretend a certain version is installed.
 
     Inside this context, ``get_version`` will return the indicated version
@@ -109,7 +110,7 @@ def pretend_version(version_dict: Dict[str, str]):
 
     get_version_orig = get_version
 
-    def get_version(package: str):
+    def get_version(package: str) -> "Version":
         version = version_dict.get(package)
         # we can't do version_dict.get(package, _get_version(package)) since the
         # 2nd argument may raise an error, e.g. for 'Python'
@@ -167,22 +168,22 @@ class versiondispatch:
     >>> foo()  # output depends on installed scikit-learn version
 
     """
-    def __init__(self, func):
+    def __init__(self, func: AnyFunc) -> None:
         self._func = func
 
         self._funcname = getattr(self._func, '__name__', 'versiondispatch function')
-        self._impl = self._func  # use initial func by default
+        self._impl: AnyFunc = self._func  # use initial func by default
         self._matched_version = ""  # mostly for debugging
-        self._registered_funcs = []
+        self._registered_funcs: list[tuple[str, AnyFunc]] = []
 
     def _matches_all_versions(self, package_versions: list[tuple[str, str, BinOp]]) -> bool:
         return _matches_all_versions(package_versions)
 
-    def register(self, package_versions: str):
+    def register(self, package_versions: str) -> Callable[[AnyFunc], AnyFunc]:
         splits = [pv.strip() for pv in package_versions.replace(";", ",").split(",")]
         return self._register(splits)
 
-    def _register(self, package_version_list: list[str]):
+    def _register(self, package_version_list: list[str]) -> Callable[[AnyFunc], AnyFunc]:
         packages_versions = []
         for package_version in package_version_list:
             package, version, operator = _split_package_version(package_version)
@@ -195,7 +196,7 @@ class versiondispatch:
 
             packages_versions.append((package, version, operator))
 
-        def outer(func):
+        def outer(func: AnyFunc) -> AnyFunc:
             if getattr(func, "_is_versiondispatched", False) is True:
                 raise ValueError(
                     "You are nesting versiondispatch, which is not supported, instead provide "
@@ -203,7 +204,7 @@ class versiondispatch:
                 )
 
             try:
-                self._impl._is_versiondispatched = True
+                self._impl._is_versiondispatched = True  # type: ignore
             except AttributeError:
                 # TODO some builtin functions are immutable
                 pass
@@ -216,10 +217,10 @@ class versiondispatch:
 
             return self._impl
 
-        outer._is_versiondispatched = True
+        outer._is_versiondispatched = True  # type: ignore
         return outer
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._impl(*args, **kwargs)
 
     def __getstate__(self) -> Dict[str, Any]:
@@ -251,20 +252,20 @@ class versiondispatch:
         self.__dict__.update(state)
         self.reset()
 
-    def __get__(self, obj, cls):
+    def __get__(self, obj: Any, cls: Any) -> AnyFunc:
         # This method is basically copied from functools.singledispatchmethod.
         # Not exactly sure why it works but it seems to do its job.
-        def _method(*args, **kwargs):
+        def _method(*args: Any, **kwargs: Any) -> Any:
             method = self._impl
             return method.__get__(obj, cls)(*args, **kwargs)
 
-        _method.__isabstractmethod__ = self.__isabstractmethod__
-        _method.register = self.register
+        _method.__isabstractmethod__ = self.__isabstractmethod__  # type: ignore
+        _method.register = self.register  # type: ignore
         update_wrapper(_method, self._func)
         return _method
 
     @property
-    def __isabstractmethod__(self):
+    def __isabstractmethod__(self) -> bool:
         return getattr(self._impl, '__isabstractmethod__', False)
 
 
