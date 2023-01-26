@@ -40,7 +40,7 @@ def _():
     return "both numpy and sklearn are old"
 #+end_src
 
-If multiple conditions are matching, then the /last/ condition takes precendence. So in this case if both sklearn and numpy are below v1.0, we would get "both numpy and sklearn are old", and not "only sklearn is old", even though that matches too.
+If multiple conditions are matching, then the /last/ condition takes precedence. So in this case if both sklearn and numpy are below v1.0, we would get "both numpy and sklearn are old", and not "only sklearn is old", even though that matches too.
 
 Depending on how you define the functions, the last condition is not necessarily the /most specific/ condition, so take care.
 *** Dispatching on the Python version
@@ -48,16 +48,18 @@ It is possible to register different functions based on the Python version being
 
 #+begin_src python
 @versiondispatch
-def foo():
-    return "default behavior"
+def show_items(list_a, list_b):
+    # the strict argument for zip was introduced in Python 3.10
+    for item_a, item_b in zip(list_a, list_b, strict=True):
+        print(item_a, item_b)
 
-@foo.register("sklearn<1.0")
-def _():
-    return "only sklearn is old"
-
-@foo.register("numpy<1.0, sklearn<1.0")
-def _():
-    return "both numpy and sklearn are old"
+@show_items.register("Python<3.10")
+def _(list_a, list_b):
+    # older versions of Python need to check explicitly
+    if len(list_a) != len(list_b):
+        raise ValueError("zip arguments don't have same length")
+    for item_a, item_b in zip(list_a, list_b, strict=True):
+        print(item_a, item_b)
 #+end_src
 
 ** Installation
