@@ -572,3 +572,29 @@ class TestCheckPythonVersion:
         with pretend_version({"Python": "3.11.12"}):
             func = self.get_func()
             assert func() == "exact"
+
+
+def test_doc_is_conserved_default():
+    @versiondispatch
+    def func():
+        """This is a docstring"""
+        return f"default"
+
+    @func.register("rich<1.0")
+    def _():
+        return f"old"
+
+    assert func.__doc__ == "This is a docstring"
+
+
+def test_doc_is_conserved_registered():
+    @versiondispatch
+    def func():
+        """This is a docstring"""
+        return f"default"
+
+    @func.register("rich>1.0")
+    def _():
+        return f"old"
+
+    assert func.__doc__ == "This is a docstring"

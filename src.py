@@ -12,7 +12,7 @@ import operator
 import re
 import sys
 from contextlib import contextmanager
-from functools import update_wrapper
+from functools import update_wrapper, wraps
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
 from typing import Any, Callable, Dict, Generator, Optional, SupportsInt, Tuple, Union
@@ -175,6 +175,10 @@ class versiondispatch:
         self._impl: AnyFunc = self._func  # use initial func by default
         self._matched_version = ""  # mostly for debugging
         self._registered_funcs: list[tuple[str, AnyFunc]] = []
+
+        # this looks kinda strange but makes it so that the docstring of the
+        # original function is conserved
+        self = wraps(self._impl)(self)
 
     def _matches_all_versions(self, package_versions: list[tuple[str, str, BinOp]]) -> bool:
         return _matches_all_versions(package_versions)
