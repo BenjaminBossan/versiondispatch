@@ -188,7 +188,10 @@ class versiondispatch:
             package, version, operator = _split_package_version(package_version)
 
             if not (_is_valid_package(package) and _is_valid_version(version)):
-                raise ValueError(f"{self._funcname} uses incorrect version spec: {package_version}")
+                raise ValueError(
+                    f"{self._funcname} uses incorrect version spec or package is not "
+                    f"installed: {package_version}"
+                )
 
             packages_versions.append((package, version, operator))
 

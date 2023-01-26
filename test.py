@@ -235,7 +235,7 @@ def test_invalid_version_spec():
     def func():
         return "foo"
 
-    match = "func uses incorrect version spec: rich==1.foo.0"
+    match = "func uses incorrect version spec or package is not installed: rich==1.foo.0"
     with pytest.raises(ValueError, match=match):
         @func.register("rich==1.foo.0")
         def _(bar, baz="baz"):
@@ -247,7 +247,7 @@ def test_invalid_package():
     def func():
         return "foo"
 
-    match = "func uses incorrect version spec: rich kid==1.0"
+    match = "func uses incorrect version spec or package is not installed: rich kid==1.0"
     with pytest.raises(ValueError, match=match):
         @func.register("rich kid==1.0")
         def _(bar, baz="baz"):
