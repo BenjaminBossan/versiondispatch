@@ -21,7 +21,8 @@ from typing import Any, Callable, Dict, Generator, Optional, SupportsInt, Tuple,
 __all__ = ["versiondispatch"]
 
 
-_OP_TABLE = {
+BinOp = Callable[["Version", "Version"], bool]
+_OP_TABLE: Dict[str, BinOp] = {
     "==": operator.eq,
     ">=": operator.ge,
     "<=": operator.le,
@@ -29,7 +30,6 @@ _OP_TABLE = {
     "<": operator.lt,
 }
 _OP_PAT = re.compile(r"|".join(_OP_TABLE))
-BinOp = Callable[["Version", "Version"], bool]
 AnyFunc = Callable[..., Any]
 
 
@@ -55,6 +55,8 @@ def _is_valid_version(version: str) -> bool:
 def _is_valid_package(package: str) -> bool:
     if package.lower() == "python":
         return True
+    if package.lower() == "os":
+        return True
 
     valid = True
     try:
@@ -64,9 +66,11 @@ def _is_valid_package(package: str) -> bool:
     return valid
 
 
-def get_version(package: str) -> "Version":
+def get_version(package: str) -> Union[str, "Version"]:
     if package.lower() == "python":
         return Version(".".join(map(str, sys.version_info[:3])))
+    if package.lower() == "os":
+        return sys.platform
 
     return Version(_get_version(package))
 
@@ -110,12 +114,16 @@ def pretend_version(version_dict: Dict[str, str]) -> Generator[None, None, None]
 
     get_version_orig = get_version
 
-    def get_version(package: str) -> "Version":
+    def get_version(package: str) -> Union[str, "Version"]:
         version = version_dict.get(package)
         # we can't do version_dict.get(package, _get_version(package)) since the
         # 2nd argument may raise an error, e.g. for 'Python'
         if version is None:
             version = _get_version(package)
+
+        if package.lower() == "os":
+            return version
+
         return Version(version)
 
     yield
@@ -125,6 +133,12 @@ def pretend_version(version_dict: Dict[str, str]) -> Generator[None, None, None]
 
 def _matches_version(package: str, version: str, op: BinOp) -> bool:
     v0 = get_version(package)
+
+    if isinstance(v0, str):
+        if op != operator.eq:
+            raise ValueError("string comparison only possible with ==")
+        return v0.lower() == version.lower()
+
     v1 = parse(version)
     return op(v0, v1)
 
@@ -192,7 +206,10 @@ class versiondispatch:
         for package_version in package_version_list:
             package, version, operator = _split_package_version(package_version)
 
-            if not (_is_valid_package(package) and _is_valid_version(version)):
+            if not (
+                _is_valid_package(package)
+                and ((package.lower() == "os") or _is_valid_version(version))
+            ):
                 raise ValueError(
                     f"{self._funcname} uses incorrect version spec or package is not "
                     f"installed: {package_version}"

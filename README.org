@@ -61,7 +61,21 @@ def _(list_a, list_b):
     for item_a, item_b in zip(list_a, list_b, strict=True):
         print(item_a, item_b)
 #+end_src
+*** Dispatching based on operating system
+The special key ~"os"~ is reserved for checking the operating system. Only equality tests are supported for that.
+#+begin_src python
+@versiondispatch
+def func():
+    return "Linux"
 
+@func.register("os==win32")
+def _():
+    return "Windows"
+
+@func.register("os==Darwin")
+def _():
+    return "MacOS"
+#+end_src
 ** Installation
 There is no PyPI package for now. The best way to use this is to copy the contents of ~src.py~ into your own project and use it from there ("vendoring").
 ** Rationale
@@ -111,8 +125,6 @@ def _():
   return "old behavior"
 #+end_src
 ** Special keys
-*** Operating system
-Allow checking for the OS, e.g. ~@foo.register("os==darwin")~
 *** Environment variables
 It might be nice to be able to check env vars, even if only for exact equality, like ~@foo.register("$LANG==en_US.UTF-8")~
 ** More checks on indicated versions

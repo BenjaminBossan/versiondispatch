@@ -416,22 +416,22 @@ class TestStaticMethod:
             @versiondispatch
             @staticmethod
             def func():
-                return f"default"
+                return "default"
 
             @func.register("rich<1.0")
             @staticmethod
             def _old():
-                return f"old"
+                return "old"
 
             @func.register("rich>=1000")
             @staticmethod
             def _new():
-                return f"new"
+                return "new"
 
             @func.register("rich==1.2.3")
             @staticmethod
             def _exact():
-                return f"exact"
+                return "exact"
 
         return MyClass()
 
@@ -505,19 +505,19 @@ class TestClassmethod:
 class MyClass:
     @versiondispatch
     def func(self):
-        return f"default"
+        return "default"
 
     @func.register("rich<1.0")
     def _old(self):
-        return f"old"
+        return "old"
 
     @func.register("rich>=1000")
     def _new(self):
-        return f"new"
+        return "new"
 
     @func.register("rich==1.2.3")
     def _exact(self):
-        return f"exact"
+        return "exact"
 
 
 def test_decorated_method_pickleable():
@@ -538,19 +538,19 @@ class TestCheckPythonVersion:
     def get_func(self):
         @versiondispatch
         def func():
-            return f"default"
+            return "default"
 
         @func.register("Python<3.8")
         def _old():
-            return f"old"
+            return "old"
 
         @func.register("Python>=4")
         def _new():
-            return f"new"
+            return "new"
 
         @func.register("Python==3.11.12")
         def _exact():
-            return f"exact"
+            return "exact"
 
         return func
 
@@ -578,11 +578,11 @@ def test_doc_is_conserved_default():
     @versiondispatch
     def func():
         """This is a docstring"""
-        return f"default"
+        return "default"
 
     @func.register("rich<1.0")
     def _():
-        return f"old"
+        return "old"
 
     assert func.__doc__ == "This is a docstring"
 
@@ -591,10 +591,55 @@ def test_doc_is_conserved_registered():
     @versiondispatch
     def func():
         """This is a docstring"""
-        return f"default"
+        return "default"
 
     @func.register("rich>1.0")
     def _():
-        return f"old"
+        return "old"
 
     assert func.__doc__ == "This is a docstring"
+
+
+class TestCheckOS:
+    # dispatching on operating system
+
+    def get_func(self):
+        @versiondispatch
+        def func():
+            return "Linux"
+
+        @func.register("os==win32")
+        def _():
+            return "Windows"
+
+        @func.register("os==Darwin")
+        def _():
+            return "MacOS"
+
+        return func
+
+    def test_default(self):
+        func = self.get_func()
+        assert func() == "Linux"
+
+    def test_win(self):
+        with pretend_version({"os": "win32"}):
+            func = self.get_func()
+            assert func() == "Windows"
+
+    def test_gt(self):
+        with pretend_version({"os": "Darwin"}):
+            func = self.get_func()
+            assert func() == "MacOS"
+
+    @pytest.mark.parametrize("op", ["<", "<=", ">", ">="])
+    def test_operator_not_eq_raises(self, op):
+        @versiondispatch
+        def func():
+            return "Linux"
+
+        match = "string comparison only possible with =="
+        with pytest.raises(ValueError, match=match):
+            @func.register(f"os{op}win32")
+            def _old():
+                return "Windows"
