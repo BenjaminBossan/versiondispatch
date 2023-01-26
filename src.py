@@ -1,3 +1,11 @@
+"""versiondispatch module
+
+This module is self-contained and can thus be vendored with other applications.
+
+Only the 'versiondispatch' function is intended for direct usage.
+
+"""
+
 import collections
 import itertools
 import operator
@@ -64,7 +72,39 @@ def get_version(package: str) -> "Version":
 
 @contextmanager
 def pretend_version(version_dict: Dict[str, str]):
-    """TODO"""
+    """Context manager to pretend a certain version is installed.
+
+    Inside this context, ``get_version`` will return the indicated version
+    instead of the true version of the package.
+
+    This is for testing purposes and should not be used in any actual code.
+
+    Examples
+    --------
+    >>> @versiondispatch
+    ... def foo():
+    ...     return "default"
+    ...
+    >>> @foo.register("rich>100")
+    ... def _():
+    ...     return "very rich"
+    ...
+    >>> foo()
+    'default'
+    ...
+    >>> with pretend_version({"rich": "101"}):
+    ...     @versiondispatch
+    ...     def foo():
+    ...         return "default"
+    ...
+    ...     @foo.register("rich>100")
+    ...     def _():
+    ...         return "very rich"
+    ...
+    ...     foo()
+    'very rich'
+
+    """
     global get_version
 
     get_version_orig = get_version
@@ -97,7 +137,36 @@ def _matches_all_versions(package_versions: list[tuple[str, str, BinOp]]) -> boo
 
 
 class versiondispatch:
-    """TODO"""
+    """Dispatch functions based on versions of installed packages
+
+    Transforms a function into a generic function, which can have different
+    behaviours depending upon the version of installed packages. The decorated
+    function acts as the default implementation, and additional implementations
+    can be registered using the ``register()`` attribute of the generic
+    function.
+
+    The API is similar to the builtin ``functools.singledispatch``, only,
+    instead of dispatching on the type of input arguments, this decorator
+    dispatches on the versions of installed packages.
+
+    Examples
+    --------
+    >>> @versiondispatch
+    >>> def foo():
+    ...     return "default behavior"
+    ...
+    >>> # the name of the registered function doesn't matter
+    >>> @foo.register("sklearn>1.2")
+    ... def _():
+    ...     return "new behavior"
+    ...
+    >>> @foo.register("sklearn<1.0")
+    ... def _():
+    ...     return "old behavior"
+    ...
+    >>> foo()  # output depends on installed scikit-learn version
+
+    """
     def __init__(self, func):
         self._func = func
 
@@ -154,7 +223,17 @@ class versiondispatch:
         return self.__dict__.copy()
 
     def reset(self) -> None:
-        """TODO"""
+        """Re-evaluate what function to dispatch to
+
+        Usually, the version of a package is fixed, thus it's enough to check it
+        once, at function definition time, and then leave it as is. In some
+        circumstances, however, the version of a package can change later on;
+        most notably, when the function was defined, pickled, and later loaded
+        into an environment that uses different package versions. For this
+        situation, the ``reset`` method can be used to evaluate the package
+        versions again.
+
+        """
         # clear registration
         self._impl = self._func
         self._matched_version = ""
