@@ -182,10 +182,11 @@ class versiondispatch:
     >>> foo()  # output depends on installed scikit-learn version
 
     """
+
     def __init__(self, func: AnyFunc) -> None:
         self._func = func
 
-        self._funcname = getattr(self._func, '__name__', 'versiondispatch function')
+        self._funcname = getattr(self._func, "__name__", "versiondispatch function")
         self._impl: AnyFunc = self._func  # use initial func by default
         self._matched_version = ""  # mostly for debugging
         self._registered_funcs: list[tuple[str, AnyFunc]] = []
@@ -194,14 +195,18 @@ class versiondispatch:
         # original function is conserved
         self = wraps(self._impl)(self)
 
-    def _matches_all_versions(self, package_versions: list[tuple[str, str, BinOp]]) -> bool:
+    def _matches_all_versions(
+        self, package_versions: list[tuple[str, str, BinOp]]
+    ) -> bool:
         return _matches_all_versions(package_versions)
 
     def register(self, package_versions: str) -> Callable[[AnyFunc], AnyFunc]:
         splits = [pv.strip() for pv in package_versions.replace(";", ",").split(",")]
         return self._register(splits)
 
-    def _register(self, package_version_list: list[str]) -> Callable[[AnyFunc], AnyFunc]:
+    def _register(
+        self, package_version_list: list[str]
+    ) -> Callable[[AnyFunc], AnyFunc]:
         packages_versions = []
         for package_version in package_version_list:
             package, version, operator = _split_package_version(package_version)
@@ -220,8 +225,9 @@ class versiondispatch:
         def outer(func: AnyFunc) -> AnyFunc:
             if getattr(func, "_is_versiondispatched", False) is True:
                 raise ValueError(
-                    "You are nesting versiondispatch, which is not supported, instead provide "
-                    "multiple version, e.g. '@versiondispatch(\"foo=1.0\", \"bar=2.0\")'"
+                    "You are nesting versiondispatch, which is not supported, instead "
+                    "provide multiple version, e.g. "
+                    '\'@versiondispatch("foo=1.0", "bar=2.0")\''
                 )
 
             try:
@@ -287,12 +293,13 @@ class versiondispatch:
 
     @property
     def __isabstractmethod__(self) -> bool:
-        return getattr(self._impl, '__isabstractmethod__', False)
+        return getattr(self._impl, "__isabstractmethod__", False)
 
 
 #################################################
 # VENDERED VERSION FUNCTIONALITY FROM packaging #
 #################################################
+
 
 class InfinityType:  # pragma: no cover
     def __repr__(self) -> str:
@@ -373,7 +380,6 @@ LegacyCmpKey = Tuple[int, Tuple[str, ...]]
 _Version = collections.namedtuple(
     "_Version", ["epoch", "release", "dev", "pre", "post", "local"]
 )
-
 
 
 def parse(version: str) -> "Version":  # pragma: no cover BB

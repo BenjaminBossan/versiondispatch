@@ -1,6 +1,8 @@
+black
 coverage
 mypy
 packaging
 pytest
 pytest-cov
 rich
+ruff

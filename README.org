@@ -108,6 +108,10 @@ In contrast, if you write application code with all dependency versions being pi
 ~pytest --cov --cov-report=term-missing test.py~
 *** run mypy
 ~mypy --strict src.py~
+*** run black
+~black *.py~
+*** run ruff
+~ruff .~
 * TODOs
 Under consideration to be implemented yet:
 ** Optional warnings

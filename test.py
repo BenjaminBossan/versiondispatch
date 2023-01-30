@@ -111,6 +111,7 @@ class TestMultipleChecks:
 
     def test_both_match_gt_gt(self):
         with pretend_version({"rich": "5555", "pytest": "9999.99.99dev"}):
+
             @versiondispatch
             def func(bar, baz="baz"):
                 return f"default default {bar}-{baz}"
@@ -135,6 +136,7 @@ class TestMultipleChecks:
 
     def test_both_match_exact_exact(self):
         with pretend_version({"rich": "1.2.3", "pytest": "3.2.1"}):
+
             @versiondispatch
             def func(bar, baz="baz"):
                 return f"default default {bar}-{baz}"
@@ -212,6 +214,7 @@ def test_nested_versiondispatch_raises():
         return "func"
 
     with pytest.raises(ValueError, match=match):
+
         @func.register("rich<1.0")
         @func.register("pytest<=1")
         def _():
@@ -225,6 +228,7 @@ def test_invalid_package_version_spec():
 
     match = "Version not correctly specified, should be like"
     with pytest.raises(ValueError, match=match):
+
         @func.register("rich=1.0")
         def _(bar, baz="baz"):
             return "bar"
@@ -235,8 +239,11 @@ def test_invalid_version_spec():
     def func():
         return "foo"
 
-    match = "func uses incorrect version spec or package is not installed: rich==1.foo.0"
+    match = (
+        "func uses incorrect version spec or package is not installed: rich==1.foo.0"
+    )
     with pytest.raises(ValueError, match=match):
+
         @func.register("rich==1.foo.0")
         def _(bar, baz="baz"):
             return "bar"
@@ -247,8 +254,11 @@ def test_invalid_package():
     def func():
         return "foo"
 
-    match = "func uses incorrect version spec or package is not installed: rich kid==1.0"
+    match = (
+        "func uses incorrect version spec or package is not installed: rich kid==1.0"
+    )
     with pytest.raises(ValueError, match=match):
+
         @func.register("rich kid==1.0")
         def _(bar, baz="baz"):
             return "bar"
@@ -315,7 +325,6 @@ class TestPickle:
         # Y, version Y should take precedence
         func = versiondispatch(min)
         func.register("rich<1.0")(max)
-        pickled = pickle.dumps(func)
 
         with pretend_version({"rich": "0.1"}):
             loaded = pickle.loads(pickle.dumps(func))
@@ -329,19 +338,19 @@ class TestMethodNoArgs:
         class MyClass:
             @versiondispatch
             def func(self):
-                return f"default"
+                return "default"
 
             @func.register("rich<1.0")
             def _old(self):
-                return f"old"
+                return "old"
 
             @func.register("rich>=1000")
             def _new(self):
-                return f"new"
+                return "new"
 
             @func.register("rich==1.2.3")
             def _exact(self):
-                return f"exact"
+                return "exact"
 
         return MyClass()
 
@@ -463,22 +472,22 @@ class TestClassmethod:
             @versiondispatch
             @classmethod
             def func(cls):
-                return f"default"
+                return "default"
 
             @func.register("rich<1.0")
             @classmethod
             def _old(cls):
-                return f"old"
+                return "old"
 
             @func.register("rich>=1000")
             @classmethod
             def _new(cls):
-                return f"new"
+                return "new"
 
             @func.register("rich==1.2.3")
             @classmethod
             def _exact(cls):
-                return f"exact"
+                return "exact"
 
         return MyClass()
 
@@ -640,6 +649,7 @@ class TestCheckOS:
 
         match = "string comparison only possible with =="
         with pytest.raises(ValueError, match=match):
+
             @func.register(f"os{op}win32")
             def _old():
                 return "Windows"
