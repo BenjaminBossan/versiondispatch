@@ -76,6 +76,25 @@ def _():
 def _():
     return "MacOS"
 #+end_src
+*** Optional warnings
+It is possible to register warnings for specific versions. These warnings are shown to the user in case their version matches with the registerd version.
+
+#+begin_src python
+@versiondispatch
+def foo():
+    # no warning here
+    return "default behavior"
+
+msg = "You are using an old sklearn version, which will not be supported after the next release"
+
+@foo.register("sklearn<1.0", warning=DeprecationWarning(msg))
+def _():
+    # if this is called, there will be a warning
+    return "old behavior"
+
+# if, and only if, a user calls foo with an old sklearn version, the DeprecationWarning is shown
+foo()
+#+end_src
 ** Installation
 There is no PyPI package for now. The best way to use this is to copy the contents of ~src.py~ into your own project and use it from there ("vendoring").
 ** Rationale
@@ -114,20 +133,6 @@ In contrast, if you write application code with all dependency versions being pi
 ~ruff .~
 * TODOs
 Under consideration to be implemented yet:
-** Optional warnings
-It would be nice to have a feature to add a warning when a specific version is found, most notably for deprecations:
-
-#+begin_src python
-@versiondispatch
-def foo():
-  return "default behavior"
-
-msg = "You are using an old sklearn version, which will not be supported after the next release"
-
-@foo.register("sklearn<1.0", warning=DeprecationWarning(msg))
-def _():
-  return "old behavior"
-#+end_src
 ** Special keys
 *** Environment variables
 It might be nice to be able to check env vars, even if only for exact equality, like ~@foo.register("$LANG==en_US.UTF-8")~

@@ -301,7 +301,7 @@ def test_version_check_performed_only_once():
 
 class TestPickle:
     # Tests centered around pickling the decorated function. Note that this test
-    # requires to use defined functions, such as min and max; locally defined
+    # requires to use existing functions, such as min and max; locally defined
     # functions are not pickleable to begin with.
     def test_pickleable_default(self):
         func = versiondispatch(min)
@@ -653,3 +653,133 @@ class TestCheckOS:
             @func.register(f"os{op}win32")
             def _old():
                 return "Windows"
+
+
+class TestWarnings:
+    # test that warnings are shown if the version matches
+
+    # Note that this test requires to use existing functions, such as min and
+    # max; locally defined functions are not pickleable to begin with.
+
+    def get_func(self, warn_for=None):
+        assert not isinstance(warn_for, str)
+        warn_for = warn_for or ()
+
+        @versiondispatch
+        def func():
+            return "default"
+
+        # fmt: off
+        if "old" in warn_for:
+            @func.register("rich<1.0", warning=DeprecationWarning("warning for old"))
+            def _old():
+                return "old"
+        else:
+            @func.register("rich<1.0")
+            def _old():
+                return "old"
+
+        if "new" in warn_for:
+            @func.register("rich>=1000", warning=DeprecationWarning("warning for new"))
+            def _new():
+                return "new"
+        else:
+            @func.register("rich>=1000")
+            def _new():
+                return "new"
+        # fmt: on
+
+        return func
+
+    def test_default_no_warning(self, recwarn):
+        # no warnings registered
+        func = self.get_func()
+        assert func() == "default"
+        assert not recwarn.list
+
+        # warnings registerd for old and new but default called
+        func = self.get_func(warn_for=["old", "new"])
+        assert func() == "default"
+        assert not recwarn.list
+
+    def test_non_default_no_warning(self, recwarn):
+        # no warnings registered
+        with pretend_version({"rich": "0.1"}):
+            func = self.get_func()
+        assert func() == "old"
+        assert not recwarn.list
+
+        # warning registered for new but old called
+        with pretend_version({"rich": "0.1"}):
+            func = self.get_func(warn_for=["new"])
+        assert func() == "old"
+        assert not recwarn.list
+
+        # warning registered for new but old called
+        with pretend_version({"rich": "1234"}):
+            func = self.get_func(warn_for=["old"])
+        assert func() == "new"
+        assert not recwarn.list
+
+    def test_non_default_warning(self, recwarn):
+        # warning registered, and shown, for old
+        with pretend_version({"rich": "0.1"}):
+            func = self.get_func(warn_for=["old"])
+
+        assert func() == "old"
+        assert len(recwarn.list) == 1
+        assert recwarn.list[0].message.args[0] == "warning for old"
+
+    def test_non_default_multiple_warnings_registered(self, recwarn):
+        # warning registered for new and old, but warning for new should be
+        # shown
+        with pretend_version({"rich": "1234"}):
+            func = self.get_func(warn_for=["new", "old"])
+
+        assert func() == "new"
+        assert len(recwarn.list) == 1
+        assert recwarn.list[0].message.args[0] == "warning for new"
+
+    def test_unpickle_on_different_version_shows_no_warning(self, recwarn):
+        # At function definition time, the version is new, which has a warning,
+        # but when unpickling, the version is old, which has no warning.
+        # Therefore, there should be no warning.
+        func = versiondispatch(min)
+
+        with pretend_version({"rich": "1234"}):
+            func.register("rich<1.0")(max)
+
+            warning = DeprecationWarning("warning for new")
+            func.register("rich>=1000", warning=warning)(sum)
+            pickled = pickle.dumps(func)
+
+            # sanity check that there is a registered warning
+            assert func._warning
+
+        with pretend_version({"rich": "0.1"}):
+            loaded = pickle.loads(pickled)
+
+        assert loaded([1, 2, 3]) == 3
+        assert not recwarn.list
+
+    def test_unpickle_on_different_version_shows_correct_warning(self, recwarn):
+        # At function definition time, the version is old, but when unpickling,
+        # the version is new. Therefore, the warning for new should be shown.
+        func = versiondispatch(min)
+        with pretend_version({"rich": "0.1"}):
+            warning_old = DeprecationWarning("warning for old")
+            func.register("rich<1.0", warning=warning_old)(max)
+
+            warning_new = DeprecationWarning("warning for new")
+            func.register("rich>=1000", warning=warning_new)(sum)
+
+            # sanity check that the registered warning is for old
+            assert func._warning.args[0] == "warning for old"
+
+        pickled = pickle.dumps(func)
+        with pretend_version({"rich": "1234"}):
+            loaded = pickle.loads(pickled)
+
+        assert loaded([1, 2, 3]) == 6
+        assert len(recwarn.list) == 1
+        assert recwarn.list[0].message.args[0] == "warning for new"

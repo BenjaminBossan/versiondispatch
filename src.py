@@ -11,6 +11,7 @@ import itertools
 import operator
 import re
 import sys
+import warnings
 from contextlib import contextmanager
 from functools import update_wrapper, wraps
 from importlib.metadata import PackageNotFoundError
@@ -189,7 +190,11 @@ class versiondispatch:
         self._funcname = getattr(self._func, "__name__", "versiondispatch function")
         self._impl: AnyFunc = self._func  # use initial func by default
         self._matched_version = ""  # mostly for debugging
-        self._registered_funcs: list[tuple[str, AnyFunc]] = []
+        self._warning: Warning | None = None
+
+        # remember the version string, the dispatch function, and the warning
+        # associated with each registered function
+        self._registered_funcs: list[tuple[str, AnyFunc, Warning | None]] = []
 
         # this looks kinda strange but makes it so that the docstring of the
         # original function is conserved
@@ -200,12 +205,14 @@ class versiondispatch:
     ) -> bool:
         return _matches_all_versions(package_versions)
 
-    def register(self, package_versions: str) -> Callable[[AnyFunc], AnyFunc]:
+    def register(
+        self, package_versions: str, warning: Warning | None = None
+    ) -> Callable[[AnyFunc], AnyFunc]:
         splits = [pv.strip() for pv in package_versions.replace(";", ",").split(",")]
-        return self._register(splits)
+        return self._register(splits, warning=warning)
 
     def _register(
-        self, package_version_list: list[str]
+        self, package_version_list: list[str], warning: Warning | None = None
     ) -> Callable[[AnyFunc], AnyFunc]:
         packages_versions = []
         for package_version in package_version_list:
@@ -236,11 +243,14 @@ class versiondispatch:
                 # TODO some builtin functions are immutable
                 pass
 
-            self._registered_funcs.append((",".join(package_version_list), func))
+            self._registered_funcs.append(
+                (",".join(package_version_list), func, warning)
+            )
 
             if self._matches_all_versions(packages_versions):
                 self._impl = func
                 self._matched_version = version
+                self._warning = warning
 
             return self._impl
 
@@ -248,6 +258,8 @@ class versiondispatch:
         return outer
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if self._warning:
+            warnings.warn(self._warning)
         return self._impl(*args, **kwargs)
 
     def __getstate__(self) -> Dict[str, Any]:
@@ -268,12 +280,13 @@ class versiondispatch:
         # clear registration
         self._impl = self._func
         self._matched_version = ""
+        self._warning = None
         registered_functions = self._registered_funcs[:]
         self._registered_funcs.clear()
 
         # replay registration process
-        for package_versions, func in registered_functions:
-            self.register(package_versions)(func)
+        for package_versions, func, warning in registered_functions:
+            self.register(package_versions, warning=warning)(func)
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
