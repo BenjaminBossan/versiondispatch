@@ -112,30 +112,36 @@ def foo():
         # do yet something else
 #+end_src
 
-This can become messy quite quickly. The ~versiondispatch~ decorator allows to cleanly separate the functions. When, eventually, a version is no longer supported, it's as easy as deleting the whole function with the corresponding decorator, no surgical extraction from ~if~ conditions necessary.
+This can become cumbersome quite quickly. The ~versiondispatch~ decorator allows to cleanly separate the functions. When, eventually, a version is no longer supported, it's as easy as deleting the whole function with the corresponding decorator, no surgical extraction from ~if~ conditions necessary. Also, ~versiondispatch~ handles version comparison for you, which otherwise requires third party packages.
 
 Apart from a lack of readability, a disadvantage of the example above is that the version check is performed each time the function is called, even though at runtime, the version of a package (normally) never changes. Yes, it would be possible to re-write the example to cache the check, but then the code gets even messier and more error prone. ~versiondispatch~ checks the version only once, when the function is defined -- after that it statically dispatches to the desired function.
 
 In contrast, if you write application code with all dependency versions being pinned, it would not make sense to use ~versiondispatch~.
 * Development
 ** To help development, follow these steps:
-*** clone and check out the repo
-*** create a virtual environment with the tool of your choice
-*** install development dependencies:
+*** Installation
+- clone and check out the repo
+- create a virtual environment with the tool of your choice
+- install development dependencies:
 ~python -m pip install -r requirements-dev.txt~
-*** run the unit tests:
-~pytest --cov --cov-report=term-missing test.py~
-*** run mypy
-~mypy --strict src.py~
-*** run black
-~black *.py~
-*** run ruff
-~ruff .~
+*** Run checks
+#+begin_src sh
+# run the unit tests:
+pytest --cov --cov-report=term-missing test.py
+# run mypy
+mypy --strict src.py
+# run black
+black *.py
+# run ruff
+ruff .
+#+end_src
 * TODOs
-Under consideration to be implemented yet:
+Under consideration to be implemented:
 ** Special keys
 *** Environment variables
 It might be nice to be able to check env vars, even if only for exact equality, like ~@foo.register("$LANG==en_US.UTF-8")~
+** Version inequality
+Add support for the ~!=~ operator ([[https://peps.python.org/pep-0440/#version-exclusion][PEP440]])
 ** More checks on indicated versions
 It would be nice if version checks that don't make sense are caught at function definition time, like:
 
