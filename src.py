@@ -13,10 +13,20 @@ import re
 import sys
 import warnings
 from contextlib import contextmanager
-from functools import update_wrapper, wraps
+from functools import update_wrapper
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
-from typing import Any, Callable, Dict, Generator, Optional, SupportsInt, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Optional,
+    SupportsInt,
+    Tuple,
+    Union,
+    cast,
+)
 
 
 __all__ = ["versiondispatch"]
@@ -198,7 +208,7 @@ class versiondispatch:
 
         # this looks kinda strange but makes it so that the docstring of the
         # original function is conserved
-        self = wraps(self._impl)(self)
+        update_wrapper(cast(Callable[..., Any], self), self._impl)
 
     def _matches_all_versions(
         self, package_versions: list[tuple[str, str, BinOp]]
