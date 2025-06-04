@@ -76,6 +76,21 @@ def _():
 def _():
     return "MacOS"
 #+end_src
+*** Dispatching based on environment variables
+Environment variables can be checked by prefixing them with a ``$``. Only equality tests are supported for that.
+#+begin_src python
+@versiondispatch
+def func():
+    return "default"
+
+@func.register("$LANG==en_US.UTF-8")
+def _():
+    return "English"
+
+@func.register("$LANG==de_DE.UTF-8")
+def _():
+    return "German"
+#+end_src
 *** Optional warnings
 It is possible to register warnings for specific versions. These warnings are shown to the user in case their version matches with the registerd version.
 
@@ -138,8 +153,6 @@ ruff .
 * TODOs
 Under consideration to be implemented:
 ** Special keys
-*** Environment variables
-It might be nice to be able to check env vars, even if only for exact equality, like ~@foo.register("$LANG==en_US.UTF-8")~
 ** Version inequality
 Add support for the ~!=~ operator ([[https://peps.python.org/pep-0440/#version-exclusion][PEP440]])
 ** More checks on indicated versions

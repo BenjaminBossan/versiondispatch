@@ -9,6 +9,7 @@ Only the 'versiondispatch' function is intended for direct usage.
 import collections
 import itertools
 import operator
+import os
 import re
 import sys
 import warnings
@@ -58,6 +59,8 @@ def _is_valid_package(package: str) -> bool:
         return True
     if package.lower() == "os":
         return True
+    if package.startswith("$"):
+        return True
 
     valid = True
     try:
@@ -72,6 +75,8 @@ def get_version(package: str) -> Union[str, "Version"]:
         return Version(".".join(map(str, sys.version_info[:3])))
     if package.lower() == "os":
         return sys.platform
+    if package.startswith("$"):
+        return os.environ.get(package[1:], "")
 
     return Version(_get_version(package))
 
@@ -120,9 +125,12 @@ def pretend_version(version_dict: Dict[str, str]) -> Generator[None, None, None]
         # we can't do version_dict.get(package, _get_version(package)) since the
         # 2nd argument may raise an error, e.g. for 'Python'
         if version is None:
-            version = _get_version(package)
+            if package.startswith("$"):
+                version = os.environ.get(package[1:], "")
+            else:
+                version = _get_version(package)
 
-        if package.lower() == "os":
+        if package.lower() == "os" or package.startswith("$"):
             return version
 
         return Version(version)
@@ -220,7 +228,11 @@ class versiondispatch:
 
             if not (
                 _is_valid_package(package)
-                and ((package.lower() == "os") or _is_valid_version(version))
+                and (
+                    package.lower() == "os"
+                    or package.startswith("$")
+                    or _is_valid_version(version)
+                )
             ):
                 raise ValueError(
                     f"{self._funcname} uses incorrect version spec or package is not "
