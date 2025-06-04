@@ -655,6 +655,52 @@ class TestCheckOS:
                 return "Windows"
 
 
+class TestCheckEnvVar:
+    # dispatching on environment variables (only equality)
+
+    def get_func(self):
+        @versiondispatch
+        def func():
+            return "none"
+
+        @func.register("$FOO==bar")
+        def _bar():
+            return "bar"
+
+        @func.register("$FOO==baz")
+        def _baz():
+            return "baz"
+
+        return func
+
+    def test_default(self):
+        func = self.get_func()
+        assert func() == "none"
+
+    def test_bar(self):
+        with pretend_version({"$FOO": "bar"}):
+            func = self.get_func()
+            assert func() == "bar"
+
+    def test_baz(self):
+        with pretend_version({"$FOO": "baz"}):
+            func = self.get_func()
+            assert func() == "baz"
+
+    @pytest.mark.parametrize("op", ["<", "<=", ">", ">="])
+    def test_operator_not_eq_raises(self, op):
+        @versiondispatch
+        def func():
+            return "none"
+
+        match = "string comparison only possible with =="
+        with pytest.raises(ValueError, match=match):
+
+            @func.register(f"$FOO{op}bar")
+            def _old():
+                return "bar"
+
+
 class TestWarnings:
     # test that warnings are shown if the version matches
 
